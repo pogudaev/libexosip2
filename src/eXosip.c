@@ -1513,6 +1513,9 @@ void _eXosip_mark_all_transaction_transport_error(struct eXosip_t *excontext, in
   osip_list_iterator_t it;
   osip_transaction_t *transaction;
 
+  if (excontext->j_stop_ua == 1)
+    return;
+
   transaction = (osip_transaction_t *) osip_list_get_first(&excontext->j_osip->osip_ict_transactions, &it);
 
   while (transaction != OSIP_SUCCESS) {
