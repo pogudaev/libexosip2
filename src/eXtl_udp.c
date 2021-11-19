@@ -917,7 +917,7 @@ static int udp_tl_epoll_read_message(struct eXosip_t *excontext, int nfds, struc
 
 #endif
 
-static int udp_tl_read_message(struct eXosip_t *excontext, fd_set *osip_fdset, fd_set *osip_wrset) {
+static int udp_tl_read_message(struct eXosip_t *excontext, fd_set *osip_fdset, fd_set *osip_wrset, fd_set *osip_exceptset) {
   struct eXtludp *reserved = (struct eXtludp *) excontext->eXtludp_reserved;
 
   if (reserved == NULL) {
