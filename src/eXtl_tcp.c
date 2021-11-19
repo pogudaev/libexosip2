@@ -1407,7 +1407,7 @@ static int _tcp_tl_new_socket(struct eXosip_t *excontext, char *host, int port) 
       res = epoll_ctl(excontext->epfd, EPOLL_CTL_ADD, sock, &ev);
 
       if (res < 0) {
-        _tls_tl_close_sockinfo(excontext, &reserved->socket_tab[pos]);
+        _tcp_tl_close_sockinfo(excontext, &reserved->socket_tab[pos]);
         return -1;
       }
     }
