@@ -1838,13 +1838,6 @@ static int tcp_tl_send_message(struct eXosip_t *excontext, osip_transaction_t *t
       _eXosip_mark_registration_expired(excontext, sip->call_id->number);
     }
 
-    //if (naptr_record != NULL && (MSG_IS_REGISTER(sip) || MSG_IS_OPTIONS(sip))) {
-    //  if (eXosip_dnsutils_rotate_srv(&naptr_record->siptcp_record) > 0) {
-    //    OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [TCP] [tid=%i] doing TCP failover [%s][%d] -> [%s][%d]\n", tid, host, port, naptr_record->siptcp_record.srventry[naptr_record->siptcp_record.index].srv,
-    //                          naptr_record->siptcp_record.srventry[naptr_record->siptcp_record.index].port));
-    //  }
-    //}
-
     if (tr != NULL)
       osip_transaction_set_out_socket(tr, 0);
     return -1;
@@ -1918,10 +1911,6 @@ static int tcp_tl_send_message(struct eXosip_t *excontext, osip_transaction_t *t
     reserved->socket_tab[pos].tcp_inprogress_max_timeout = 0;
 
   } else {
-    //if (naptr_record != NULL && (MSG_IS_REGISTER(sip) || MSG_IS_OPTIONS(sip))) {
-    //  if (eXosip_dnsutils_rotate_srv(&naptr_record->siptcp_record) > 0) {
-    //  }
-    //}
     OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_ERROR, NULL, "[eXosip] [TCP] [tid=%i] socket [%s] [sock=%d] [pos=%d] error\n", tid, host, out_socket, pos));
     _eXosip_mark_registration_expired(excontext, reserved->socket_tab[pos].reg_call_id);
     _tcp_tl_close_sockinfo(excontext, &reserved->socket_tab[pos]);
