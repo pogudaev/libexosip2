@@ -251,8 +251,10 @@ static int cb_snd_message(osip_transaction_t *tr, osip_message_t *sip, char *hos
 static void cb_xixt_kill_transaction(int type, osip_transaction_t *tr) {
   int i;
   struct eXosip_t *excontext = (struct eXosip_t *) osip_transaction_get_reserved1(tr);
+  struct timeval time_sub; 
+  osip_timersub(&tr->destroyed_time, &tr->created_time, &time_sub);
 
-  OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [tid=%i] [cb_xixt_kill_transaction]\n", tr->transactionid));
+  OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [tid=%i] [cb_xixt_kill_transaction] [duration=%3li,%03lis]\n", tr->transactionid, time_sub.tv_sec, time_sub.tv_usec / 1000));
   i = osip_remove_transaction(excontext->j_osip, tr);
 
   if (i != 0) {
