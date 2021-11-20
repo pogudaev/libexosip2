@@ -1736,7 +1736,7 @@ static void cb_transport_error(int type, osip_transaction_t *tr, int error) {
     _eXosip_report_call_event(excontext, EXOSIP_CALL_NOANSWER, jc, jd, tr);
   }
 
-  if (type == OSIP_ICT_TRANSPORT_ERROR) {
+  if (type == OSIP_NICT_TRANSPORT_ERROR) {
     osip_naptr_t *naptr_record = tr->naptr_record;
     if (naptr_record != NULL && naptr_record->naptr_state == OSIP_NAPTR_STATE_SRVDONE && (MSG_IS_REGISTER(tr->orig_request) || MSG_IS_OPTIONS(tr->orig_request))) {
 
