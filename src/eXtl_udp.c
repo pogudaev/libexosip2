@@ -752,7 +752,7 @@ static int _udp_read_udp_main_socket(struct eXosip_t *excontext) {
               jr->stun_nport = nport;
               memcpy(jr->stun_ipbuf, ipbuf, sizeof(jr->stun_ipbuf));
               jr->pong_supported = 1;
-            } else if (jr->stun_nport != nport && osip_strcasecmp(jr->stun_ipbuf, ipbuf) != 0) {
+            } else if (jr->stun_nport != nport || osip_strcasecmp(jr->stun_ipbuf, ipbuf) != 0) {
               OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [STUN answer] received from [%s][%d] [length=%i] [NEW XOR=%s %i]\n", src6host, recvport, i, ipbuf, nport));
               jr->stun_nport = nport;
               memcpy(jr->stun_ipbuf, ipbuf, sizeof(jr->stun_ipbuf));
@@ -1302,15 +1302,8 @@ static int udp_tl_send_message(struct eXosip_t *excontext, osip_transaction_t *t
   i = _eXosip_get_addrinfo(excontext, &addrinfo, host, port, IPPROTO_UDP);
 
   if (i != 0) {
-    if (naptr_record != NULL) {
-      /* rotate on failure! */
-      if (MSG_IS_REGISTER(sip)) {
-        _eXosip_mark_registration_expired(excontext, sip->call_id->number);
-        if (eXosip_dnsutils_rotate_srv(&naptr_record->sipudp_record) > 0) {
-          OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [tid=%i] doing UDP failover [%s][%d] -> [%s][%d]\n", tid, host, port, naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].srv,
-                                naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].port));
-        }
-      }
+    if (MSG_IS_REGISTER(sip)) {
+      _eXosip_mark_registration_expired(excontext, sip->call_id->number);
     }
 
     return -1;
@@ -1464,18 +1457,11 @@ static int udp_tl_send_message(struct eXosip_t *excontext, osip_transaction_t *t
 
   i = (int) sendto(sock, (const void *) message, CAST_RECV_LEN(length), 0, (struct sockaddr *) &addr, len);
 
-  if (0 > i) {
+  if (i < 0) {
     char eb[ERRBSIZ];
     OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [tid=%i] [%s][%d] failure %s\n", tid, host, port, _ex_strerror(ex_errno, eb, ERRBSIZ)));
-    if (naptr_record != NULL) {
-      /* rotate on failure! */
-      if (MSG_IS_REGISTER(sip)) {
-        _eXosip_mark_registration_expired(excontext, sip->call_id->number);
-        if (eXosip_dnsutils_rotate_srv(&naptr_record->sipudp_record) > 0) {
-          OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [tid=%i] doing UDP failover [%s][%d] -> [%s][%d]\n", tid, host, port, naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].srv,
-                                naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].port));
-        }
-      }
+    if (MSG_IS_REGISTER(sip)) {
+      _eXosip_mark_registration_expired(excontext, sip->call_id->number);
     }
 
     /* SIP_NETWORK_ERROR; */
@@ -1504,12 +1490,8 @@ static int udp_tl_send_message(struct eXosip_t *excontext, osip_transaction_t *t
       now = osip_getsystemtime(NULL);
 
       if (tr != NULL && now - tr->birth_time > 10) {
-        /* avoid doing this twice... */
+        OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "[eXosip] [UDP] [tid=%i] [%s][%d] timeout\n", tid, host, port));
         _eXosip_mark_registration_expired(excontext, sip->call_id->number);
-        if (eXosip_dnsutils_rotate_srv(&naptr_record->sipudp_record) > 0) {
-          OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [tid=%i] doing UDP failover [%s][%d] -> [%s][%d]\n", tid, host, port, naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].srv,
-                                naptr_record->sipudp_record.srventry[naptr_record->sipudp_record.index].port));
-        }
         osip_free(message);
         return -1;
       }
@@ -1556,6 +1538,9 @@ static int udp_tl_keepalive(struct eXosip_t *excontext) {
       if (sendto(reserved->udp_socket, (const void *) &jr->stun_binding, sizeof(jr->stun_binding), 0, (struct sockaddr *) &(jr->stun_addr), jr->stun_len) > 0) {
         OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [keepalive] STUN sent on UDP\n"));
         jr->ping_rfc5626 = osip_getsystemtime(NULL) + 9;
+      } else {
+        char eb[ERRBSIZ];
+        OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] [UDP] [keepalive] failure %s\n", _ex_strerror(ex_errno, eb, ERRBSIZ)));
       }
     }
   }
