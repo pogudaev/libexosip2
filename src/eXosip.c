@@ -1626,9 +1626,6 @@ void _eXosip_mark_registration_expired(struct eXosip_t *excontext, const char *c
 }
 
 int _eXosip_mark_all_transaction_ready(struct eXosip_t *excontext, fd_set *osip_fdset, fd_set *osip_wrset, fd_set *osip_exceptset, int *osip_fd_table) {
-  int wakeup = 0;
-  int idx;
-
   osip_list_iterator_t it;
   osip_transaction_t *transaction;
 
@@ -1648,11 +1645,10 @@ int _eXosip_mark_all_transaction_ready(struct eXosip_t *excontext, fd_set *osip_
           OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [ICT] except descriptor is set\n"));
         }
 
-        //if (transaction->ict_context->timer_a_length > 0) {
-        //  osip_gettimeofday(&transaction->ict_context->timer_a_start, NULL);
-        //  add_gettimeofday(&transaction->ict_context->timer_a_start, 0);
-        //  wakeup++;
-        //}
+        if (transaction->ict_context->timer_a_length > 0) {
+          _eXosip_wakeup(excontext); /* TODO: is this required? */
+          return 1;
+        }
       }
     }
 
@@ -1675,50 +1671,14 @@ int _eXosip_mark_all_transaction_ready(struct eXosip_t *excontext, fd_set *osip_
           OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [NICT] except descriptor is set\n"));
         }
 
-        // if (transaction->nict_context->timer_e_length > 0) {
-        //  osip_gettimeofday(&transaction->nict_context->timer_e_start, NULL);
-        //  add_gettimeofday(&transaction->nict_context->timer_e_start, 0);
-        //  wakeup++;
-        //}
+        if (transaction->nict_context->timer_e_length > 0) {
+          _eXosip_wakeup(excontext);
+          return 1;
+        }
       }
     }
 
     transaction = (osip_transaction_t *) osip_list_get_next(&it);
-  }
-  return OSIP_UNDEFINED_ERROR;
-
-  /* keep only socket in osip_fd_table which are not ict_calling OR nict_trying */
-  /* so we will process them "out of transaction" */
-
-  for (idx = 0; idx < EXOSIP_MAX_SOCKETS; idx++) {
-    transaction = (osip_transaction_t *) osip_list_get_first(&excontext->j_osip->osip_ict_transactions, &it);
-
-    while (transaction != OSIP_SUCCESS) {
-      if (transaction->state == ICT_CALLING && transaction->out_socket > 0 && transaction->ict_context->timer_a_length > 0) {
-        if (transaction->out_socket == osip_fd_table[idx]) {
-          osip_fd_table[idx] = 0;
-        }
-      }
-
-      transaction = (osip_transaction_t *) osip_list_get_next(&it);
-    }
-
-    transaction = (osip_transaction_t *) osip_list_get_first(&excontext->j_osip->osip_nict_transactions, &it);
-
-    while (transaction != OSIP_SUCCESS) {
-      if (transaction->state == NICT_TRYING && transaction->out_socket > 0 && transaction->nict_context->timer_e_length > 0) {
-        if (transaction->out_socket == osip_fd_table[idx]) {
-          osip_fd_table[idx] = 0;
-        }
-      }
-
-      transaction = (osip_transaction_t *) osip_list_get_next(&it);
-    }
-  }
-
-  if (wakeup) {
-    _eXosip_wakeup(excontext);
-    return wakeup;
   }
 
   return OSIP_UNDEFINED_ERROR;
@@ -1727,9 +1687,6 @@ int _eXosip_mark_all_transaction_ready(struct eXosip_t *excontext, fd_set *osip_
 #ifdef HAVE_SYS_EPOLL_H
 
 int _eXosip_mark_all_transaction_ready_epoll(struct eXosip_t *excontext, int nfds, int *osip_fd_table) {
-  int wakeup = 0;
-  int idx;
-
   osip_list_iterator_t it;
   osip_transaction_t *transaction;
 
@@ -1742,19 +1699,17 @@ int _eXosip_mark_all_transaction_ready_epoll(struct eXosip_t *excontext, int nfd
         if (excontext->ep_array[n].data.fd == transaction->out_socket) {
           if ((excontext->ep_array[n].events & EPOLLIN) || excontext->ep_array[n].events & EPOLLOUT) {
             if (excontext->ep_array[n].events & EPOLLIN) {
-              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] read descriptor is set\n"));
+              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [ICT]  read descriptor is set\n"));
             }
             if (excontext->ep_array[n].events & EPOLLOUT) {
-              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] write descriptor is set\n"));
+              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [ICT]  write descriptor is set\n"));
             }
           }
 
-          //if (transaction->ict_context->timer_a_length > 0) {
-          //  osip_gettimeofday(&transaction->ict_context->timer_a_start, NULL);
-          //  add_gettimeofday(&transaction->ict_context->timer_a_start, 0);
-          //  wakeup++;
-          //}
-          break;
+          if (transaction->ict_context->timer_a_length > 0) {
+            _eXosip_wakeup(excontext);
+            return 1;
+          }
         }
       }
     }
@@ -1771,61 +1726,23 @@ int _eXosip_mark_all_transaction_ready_epoll(struct eXosip_t *excontext, int nfd
         if (excontext->ep_array[n].data.fd == transaction->out_socket) {
           if ((excontext->ep_array[n].events & EPOLLIN) || excontext->ep_array[n].events & EPOLLOUT) {
             if (excontext->ep_array[n].events & EPOLLIN) {
-              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] read descriptor is set\n"));
+              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [NICT] read descriptor is set\n"));
             }
             if (excontext->ep_array[n].events & EPOLLOUT) {
-              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] write descriptor is set\n"));
+              OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] [NICT] write descriptor is set\n"));
             }
           }
 
-          // if (transaction->nict_context->timer_e_length > 0) {
-          //  osip_gettimeofday(&transaction->nict_context->timer_e_start, NULL);
-          //  add_gettimeofday(&transaction->nict_context->timer_e_start, 0);
-          //  wakeup++;
-          //}
-          break;
+          if (transaction->nict_context->timer_e_length > 0) {
+            _eXosip_wakeup(excontext);
+            return 1;
+          }
         }
       }
     }
 
     transaction = (osip_transaction_t *) osip_list_get_next(&it);
   }
-  return OSIP_UNDEFINED_ERROR;
-
-  /* keep only socket in osip_fd_table which are not ict_calling OR nict_trying */
-  /* so we will process them "out of transaction" */
-
-  for (idx = 0; idx < EXOSIP_MAX_SOCKETS; idx++) {
-    transaction = (osip_transaction_t *) osip_list_get_first(&excontext->j_osip->osip_ict_transactions, &it);
-
-    while (transaction != OSIP_SUCCESS) {
-      if (transaction->state == ICT_CALLING && transaction->out_socket > 0) {
-        if (transaction->out_socket == osip_fd_table[idx]) {
-          osip_fd_table[idx] = 0;
-        }
-      }
-
-      transaction = (osip_transaction_t *) osip_list_get_next(&it);
-    }
-
-    transaction = (osip_transaction_t *) osip_list_get_first(&excontext->j_osip->osip_nict_transactions, &it);
-
-    while (transaction != OSIP_SUCCESS) {
-      if (transaction->state == NICT_TRYING && transaction->out_socket > 0) {
-        if (transaction->out_socket == osip_fd_table[idx]) {
-          osip_fd_table[idx] = 0;
-        }
-      }
-
-      transaction = (osip_transaction_t *) osip_list_get_next(&it);
-    }
-  }
-
-  if (wakeup) {
-    _eXosip_wakeup(excontext);
-    return wakeup;
-  }
-
   return OSIP_UNDEFINED_ERROR;
 }
 #endif
