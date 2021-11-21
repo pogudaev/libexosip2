@@ -1751,7 +1751,7 @@ int _eXosip_handle_incoming_message(struct eXosip_t *excontext, char *buf, size_
   if (i != 0) {
     /* this event has no transaction, */
     OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO1, NULL, "[eXosip] no transaction for message\n"));
-    eXosip_lock(excontext);
+    // REMOVE eXosip_lock(excontext);
 
     if (MSG_IS_REQUEST(se->sip))
       _eXosip_process_newrequest(excontext, se, socket);
@@ -1759,7 +1759,7 @@ int _eXosip_handle_incoming_message(struct eXosip_t *excontext, char *buf, size_
     else if (MSG_IS_RESPONSE(se->sip))
       _eXosip_process_response_out_of_transaction(excontext, se);
 
-    eXosip_unlock(excontext);
+    //REMOVE eXosip_unlock(excontext);
 
   } else {
     /* handled by oSIP ! */
@@ -1850,6 +1850,7 @@ int _eXosip_read_message(struct eXosip_t *excontext, int max_message_nb, int sec
       }
 #endif
 
+      eXosip_lock(excontext);
 #ifdef ENABLE_MAIN_SOCKET
       /* we call this anyway for incoming connection on MAIN socket */
       /* TODO: also use this code in standard version? */
@@ -1868,7 +1869,7 @@ int _eXosip_read_message(struct eXosip_t *excontext, int max_message_nb, int sec
       }
 #endif
 
-      eXosip_lock(excontext);
+      //MOVED eXosip_lock(excontext);
       i = _eXosip_dnsutils_checksock_epoll(excontext, nfds);
       if (i > 0) {
         OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] a DNS result is ready\n"));
@@ -1955,6 +1956,7 @@ int _eXosip_read_message(struct eXosip_t *excontext, int max_message_nb, int sec
 #endif
 
       } else {
+        eXosip_lock(excontext);
         for (i = 0; osip_fd_table[i] != -1; i++) {
           if (FD_ISSET(osip_fd_table[i], &osip_fdset) || FD_ISSET(osip_fd_table[i], &osip_wrset) || FD_ISSET(osip_fd_table[i], &osip_exceptset)) {
             if (excontext->cbsipWakeLock != NULL && excontext->incoming_wake_lock_state == 0)
@@ -1965,7 +1967,7 @@ int _eXosip_read_message(struct eXosip_t *excontext, int max_message_nb, int sec
           }
         }
 
-        eXosip_lock(excontext);
+        //MOVED eXosip_lock(excontext);
         i = _eXosip_dnsutils_checksock(excontext, &osip_fdset, &osip_wrset);
         if (i > 0) {
           OSIP_TRACE(osip_trace(__FILE__, __LINE__, OSIP_INFO3, NULL, "[eXosip] [socket event] a DNS result is ready\n"));

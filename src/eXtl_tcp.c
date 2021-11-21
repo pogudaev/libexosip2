@@ -2093,8 +2093,6 @@ static int tcp_tl_keepalive(struct eXosip_t *excontext) {
 
           snprintf(from, sizeof(from), "<sip:%s:%d>", locip, locport);
 
-          eXosip_lock(excontext);
-
           /* Generate an options message */
           if (eXosip_options_build_request(excontext, &options, to, from, NULL) == OSIP_SUCCESS) {
             message = NULL;
@@ -2120,7 +2118,6 @@ static int tcp_tl_keepalive(struct eXosip_t *excontext) {
                 osip_trace(__FILE__, __LINE__, OSIP_WARNING, NULL, "[eXosip] [TCP] [keepalive] socket [%s] [sock=%d] [pos=%d] failed to create sip options message\n", reserved->socket_tab[pos].remote_ip, reserved->socket_tab[pos].socket, pos));
           }
 
-          eXosip_unlock(excontext);
           continue;
         }
 
